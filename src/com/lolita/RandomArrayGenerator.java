@@ -4,34 +4,32 @@ import java.util.Random;
 import java.util.concurrent.SynchronousQueue;
 
 class RandomArrayGenerator implements Runnable{
-    private static int n;
-    private static int [] arr;
-    SynchronousQueue<int[]> output;
+    private int length;
+    private SynchronousQueue<Double[]> output;
+    private Random rand;
 
-    public RandomArrayGenerator(int n, SynchronousQueue<int[]> output) {
-        this.n = n;
+    public RandomArrayGenerator(int length, SynchronousQueue<Double[]> output, long randomSeed) {
+        this.length = length;
         this.output = output;
+        this.rand = new Random(randomSeed);
     }
 
-    public static void generateNums() {
-        arr = new int[n];
-        int randNum;
-        Random rand = new Random();
-        for (int i = 0; i < n; i++) {
-            randNum = rand.nextInt();
-            arr[i] = randNum;
+    private Double[] getGeneratedNumbers(int count) {
+        Double [] arr = new Double[count];
+        for (int i = 0; i < count; i++) {
+            arr[i] = this.rand.nextDouble();
         }
+        return arr;
     }
 
     @Override
     public void run() {
-        System.out.println("RandomArrayGenerator: run()");
+        //System.out.println("RandomArrayGenerator: run()");
         try {
-            generateNums();
-            output.put(arr);
+            output.put(getGeneratedNumbers(this.length));
         } catch(InterruptedException e) {
             e.printStackTrace();
         }
-        System.out.println("RandomArrayGenerator: an array is in output queue");
+        //System.out.println("RandomArrayGenerator: an array is in output queue");
     }
 }
