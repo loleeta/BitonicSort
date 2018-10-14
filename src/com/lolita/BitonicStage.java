@@ -22,9 +22,7 @@ class BitonicStage implements Runnable {
         System.out.println("BitonicStage: run() ");
         try {
             Double[] arr1 = input.poll(1000, TimeUnit.SECONDS);
-            System.out.println("BitonicStage1" + direction + ": received " + Arrays.toString(arr1));
             Double[] arr2 = input.poll(1000, TimeUnit.SECONDS);
-            System.out.println("BitonicStage2" + direction + ": received " + Arrays.toString(arr2));
             Double[] arr = new Double[arr1.length + arr2.length];
 
             for (int i = 0; i < arr1.length; i++)
@@ -48,7 +46,6 @@ class BitonicStage implements Runnable {
     }
 
     private void bitonic_sequence(Double[] seq, int start, int n){
-        //System.out.println("bitonic_sequence(start: " + start + " end: " + n + ")");
         if (n > 1) {
             sort(seq, start, n/2, "UP");
             sort(seq, start+n/2, n/2, "DOWN");
@@ -56,7 +53,6 @@ class BitonicStage implements Runnable {
     }
 
     private void bitonic_sort(Double[] seq, int start, int n, String direction) {
-        //System.out.println("bitonic_sort(start: " + start + " end: " + n + ")");
         if (n > 1) {
             bitonic_merge(seq, start, n, direction);
             bitonic_sort(seq, start, n/2, direction);
@@ -65,14 +61,13 @@ class BitonicStage implements Runnable {
     }
 
     private void bitonic_merge(Double[] seq, int start, int n, String direction) {
-        //System.out.println("merge(start: " + start + " end: " + n + ")");
         if (direction.equals("UP")) {
-            for (int i = start; i < n/2; i++)
+            for (int i = start; i < start+n/2; i++)
                 if (seq[i] > seq[i+n/2])
                     swap(seq, i, (i+n/2));
         }
         if (direction.equals("DOWN")){
-            for (int i = start; i < n/2; i++)
+            for (int i = start; i < start+n/2; i++)
                 if (seq[i] < seq[i+n/2])
                     swap(seq, i, (i+n/2));
         }
