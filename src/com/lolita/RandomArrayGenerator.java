@@ -24,12 +24,11 @@ class RandomArrayGenerator implements Runnable{
 
     @Override
     public void run() {
-        //System.out.println("RandomArrayGenerator: run()");
         try {
             output.put(getGeneratedNumbers(this.length));
         } catch(InterruptedException e) {
             e.printStackTrace();
         }
-        //System.out.println("RandomArrayGenerator: an array is in output queue");
+        System.out.println("RandArrayGen: run()");
     }
 }

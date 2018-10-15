@@ -6,45 +6,41 @@ import java.util.Arrays;
 
 
 public class BitonicPipeline implements Runnable{
-    public static final int SIZE = 1<<4;
-    public static Double[] arr;
-    public static SynchronousQueue<Double[]> bpInput;
-    public static SynchronousQueue<Double[]> stageOneInput = new SynchronousQueue<>(); //used by StageOne, threads 1-4
-    public static SynchronousQueue<Double[]> stageTwoAsc = new SynchronousQueue<>(); //used by BitonicStage, threads 5-7
-    public static SynchronousQueue<Double[]> stageTwoDesc = new SynchronousQueue<>();
-    public static SynchronousQueue<Double[]> stageTwoOutput = new SynchronousQueue<>();
-    public static SynchronousQueue<Double[]> finalOutput = new SynchronousQueue<>();
+    private static final int SIZE = 1<<26;
+    private static Double[] arr;
+    private static SynchronousQueue<Double[]> bpInput;
+    private static SynchronousQueue<Double[]> stageOneInput = new SynchronousQueue<>(); //used by StageOne, threads 1-4
+    private static SynchronousQueue<Double[]> stageTwoAsc = new SynchronousQueue<>(); //used by BitonicStage, threads 5-7
+    private static SynchronousQueue<Double[]> stageTwoDesc = new SynchronousQueue<>();
+    private static SynchronousQueue<Double[]> stageTwoOutput = new SynchronousQueue<>();
+    private static SynchronousQueue<Double[]> finalOutput = new SynchronousQueue<>();
 
     public BitonicPipeline(SynchronousQueue<Double[]> input) {
         this.bpInput = input;
     }
 
     public static void main(String[] args) {
-
-
-        RandomArrayGenerator arrayGen = new RandomArrayGenerator(SIZE/4, stageOneInput, 1);
-
-        StageOne ascThread1 = new StageOne(SIZE/4, "UP", stageOneInput, stageTwoAsc);
-        StageOne descThread2 = new StageOne(SIZE/4, "DOWN", stageOneInput, stageTwoDesc);
-        StageOne ascThread3 = new StageOne(SIZE/4, "UP", stageOneInput, stageTwoAsc);
-        StageOne descThread4 = new StageOne(SIZE/4, "DOWN", stageOneInput, stageTwoDesc);
-        BitonicStage bitonicThread5 = new BitonicStage(SIZE/2, "UP", stageTwoAsc,stageTwoOutput);
-        BitonicStage bitonicThread6 = new BitonicStage(SIZE/2, "DOWN", stageTwoDesc, stageTwoOutput);
-        BitonicStage bitonicThread7 = new BitonicStage(SIZE, "UP", stageTwoOutput, finalOutput);
+        StageOne ascThread1 = new StageOne(SortDirection.Ascending, stageOneInput, stageTwoAsc);
+        StageOne descThread2 = new StageOne(SortDirection.Descending, stageOneInput, stageTwoDesc);
+        StageOne ascThread3 = new StageOne(SortDirection.Ascending, stageOneInput, stageTwoAsc);
+        StageOne descThread4 = new StageOne(SortDirection.Descending, stageOneInput, stageTwoDesc);
+        BitonicStage bitonicThread5 = new BitonicStage(SortDirection.Ascending, stageTwoAsc, stageTwoDesc, stageTwoOutput);
+        BitonicStage bitonicThread6 = new BitonicStage(SortDirection.Descending, stageTwoAsc, stageTwoDesc, stageTwoOutput);
+        BitonicStage bitonicThread7 = new BitonicStage(SortDirection.Ascending, stageTwoOutput, stageTwoOutput, finalOutput);
 
         BitonicPipeline bp = new BitonicPipeline(finalOutput);
         Thread mainThread = new Thread(bp);
-        // Four threads for randomArrayGenerator, all of which write to input1
+        // Four threads for randomArrayGenerator
         Thread arrayGen1 = getArrayGeneratorThreads(System.nanoTime());
         Thread arrayGen2 = getArrayGeneratorThreads(System.nanoTime());
         Thread arrayGen3 = getArrayGeneratorThreads(System.nanoTime());
         Thread arrayGen4 = getArrayGeneratorThreads(System.nanoTime());
-        // Four threads to do initial processing of array, listening on input1 and writing to output
+        // Four threads to do initial processing of array
         Thread thread1 = new Thread(ascThread1);
         Thread thread2 = new Thread(descThread2);
         Thread thread3 = new Thread(ascThread3);
         Thread thread4 = new Thread(descThread4);
-        // Three threads to do last of bitonic sort; listening on input1-2 and writing to output
+        // Three threads to do last of bitonic sort
         Thread thread5 = new Thread(bitonicThread5);
         Thread thread6 = new Thread(bitonicThread6);
         Thread thread7 = new Thread(bitonicThread7);
@@ -88,14 +84,13 @@ public class BitonicPipeline implements Runnable{
 
     @Override
     public void run() {
-        System.out.println("BitonicPipeline: run()");
         try {
-            this.arr = bpInput.poll(100, TimeUnit.SECONDS);
-            System.out.println("BitonicPipeline received: " + Arrays.toString(this.arr));
+            this.arr = bpInput.poll(200, TimeUnit.SECONDS);
             for (int i = 0; i < SIZE - 1; i++) {
                 if (arr[i] > arr[i + 1]) {
                     System.out.println("Sorting did not work.");
-                    System.out.println(arr[i] + " > " + arr[i + 1]);
+                    System.out.printf("arr[%d] > arr[%d]: %f, %f", i, (i+1), arr[i], arr[i+1]);
+                    System.out.println(arr[i] + " at " + i + " > " + arr[i + 1]);
                     break;
                 }
             }
