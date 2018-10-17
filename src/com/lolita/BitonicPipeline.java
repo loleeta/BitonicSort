@@ -1,108 +1,93 @@
 package com.lolita;
 
+import java.util.ArrayList;
 import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.TimeUnit;
-import java.util.Arrays;
 
 
-public class BitonicPipeline implements Runnable{
-    private static final int SIZE = 1<<26;
-    private static Double[] arr;
-    private static SynchronousQueue<Double[]> bpInput;
-    private static SynchronousQueue<Double[]> stageOneInput = new SynchronousQueue<>(); //used by StageOne, threads 1-4
-    private static SynchronousQueue<Double[]> stageTwoAsc = new SynchronousQueue<>(); //used by BitonicStage, threads 5-7
-    private static SynchronousQueue<Double[]> stageTwoDesc = new SynchronousQueue<>();
-    private static SynchronousQueue<Double[]> stageTwoOutput = new SynchronousQueue<>();
-    private static SynchronousQueue<Double[]> finalOutput = new SynchronousQueue<>();
+/**
+ * BitonicPipeline represents the pipeline for bitonic sort. It has 4 StageOne
+ * objects, 3 BitonicStage objects, and 7 threads total. It contains a method
+ * for creating the objects and threads.
+ */
+public class BitonicPipeline {
+    private ArrayList<SynchronousQueue<Double[]>> stageOneInputs;
+    ArrayList<SynchronousQueue<Double[]>> stageOneOutput =
+            new ArrayList<>(4); //4 queues for threads 1-4 output
+    ArrayList<SynchronousQueue<Double[]>> stageTwoOutput =
+            new ArrayList<>(2); //2 queues for threads 5-6 output
+    private SynchronousQueue<Double[]> finalOutput; //for thread 7 output
+    private int inputSize;
 
-    public BitonicPipeline(SynchronousQueue<Double[]> input) {
-        this.bpInput = input;
+    // Objects and threads created for the pipeline
+    ArrayList<StageOne> stageOnes = new ArrayList<>(4); //4 StageOne objs
+    ArrayList<BitonicStage> bitonicStages = new ArrayList<>(3); //3 BitonicStage objs
+    ArrayList<Thread> pipelineThreads = new ArrayList<>(7); //7 threads total
+
+
+    /**
+     * Constructor for BitonicPipeline
+     * @param randNumQueues SynchronousQueues for RandomArrayGenerator
+     * @param output        SynchronousQueue for BitonicStage output
+     * @param inputSize     Size of the array
+     */
+    public BitonicPipeline(ArrayList<SynchronousQueue<Double[]>> randNumQueues,
+                           SynchronousQueue<Double[]> output, int inputSize) {
+        this.stageOneInputs = randNumQueues;
+        this.finalOutput = output;
+        this.inputSize = inputSize;
+        for (int i = 0; i < 4; i++)
+            this.stageOneOutput.add(new SynchronousQueue<Double[]>());
+        for (int i = 0; i < 2; i++)
+            this.stageTwoOutput.add(new SynchronousQueue<Double[]>());
     }
 
-    public static void main(String[] args) {
-        StageOne ascThread1 = new StageOne(SortDirection.Ascending, stageOneInput, stageTwoAsc);
-        StageOne descThread2 = new StageOne(SortDirection.Descending, stageOneInput, stageTwoDesc);
-        StageOne ascThread3 = new StageOne(SortDirection.Ascending, stageOneInput, stageTwoAsc);
-        StageOne descThread4 = new StageOne(SortDirection.Descending, stageOneInput, stageTwoDesc);
-        BitonicStage bitonicThread5 = new BitonicStage(SortDirection.Ascending, stageTwoAsc, stageTwoDesc, stageTwoOutput);
-        BitonicStage bitonicThread6 = new BitonicStage(SortDirection.Descending, stageTwoAsc, stageTwoDesc, stageTwoOutput);
-        BitonicStage bitonicThread7 = new BitonicStage(SortDirection.Ascending, stageTwoOutput, stageTwoOutput, finalOutput);
-
-        BitonicPipeline bp = new BitonicPipeline(finalOutput);
-        Thread mainThread = new Thread(bp);
-        // Four threads for randomArrayGenerator
-        Thread arrayGen1 = getArrayGeneratorThreads(System.nanoTime());
-        Thread arrayGen2 = getArrayGeneratorThreads(System.nanoTime());
-        Thread arrayGen3 = getArrayGeneratorThreads(System.nanoTime());
-        Thread arrayGen4 = getArrayGeneratorThreads(System.nanoTime());
-        // Four threads to do initial processing of array
-        Thread thread1 = new Thread(ascThread1);
-        Thread thread2 = new Thread(descThread2);
-        Thread thread3 = new Thread(ascThread3);
-        Thread thread4 = new Thread(descThread4);
-        // Three threads to do last of bitonic sort
-        Thread thread5 = new Thread(bitonicThread5);
-        Thread thread6 = new Thread(bitonicThread6);
-        Thread thread7 = new Thread(bitonicThread7);
-
-        mainThread.start();
-        arrayGen1.start();
-        arrayGen2.start();
-        arrayGen3.start();
-        arrayGen4.start();
-        Long start = System.currentTimeMillis();
-        thread1.start();
-        thread2.start();
-        thread3.start();
-        thread4.start();
-        thread5.start();
-        thread6.start();
-        thread7.start();
-
-        try {
-            arrayGen1.join();
-            arrayGen2.join();
-            arrayGen3.join();
-            arrayGen4.join();
-
-            thread1.join();
-            thread2.join();
-            thread3.join();
-            thread4.join();
-            thread5.join();
-            thread6.join();
-            thread7.join();
-            mainThread.join();
-        } catch(InterruptedException e) {
-            e.printStackTrace();
+    /**
+     * Creates objects and threads for StageOne and BitonicStage
+     * @return ArrayList of total threads in pipeline
+     */
+    public ArrayList<Thread> createAndStartThreads() {
+        //Create 4 StageOne objects
+        for (int i = 0; i < 4; i++) {
+            SortDirection direction = i % 2 == 0 ?
+                    SortDirection.Ascending : SortDirection.Descending;
+            StageOne stageOne = new StageOne(direction,
+                                             this.stageOneInputs.get(i),
+                                             this.stageOneOutput.get(i));
+            this.stageOnes.add(stageOne);
         }
 
+        //Create 3 BitonicStage objects
+        this.bitonicStages.add(
+                        new BitonicStage(
+                                SortDirection.Ascending,
+                                this.stageOneOutput.get(0),
+                                this.stageOneOutput.get(1),
+                                this.stageTwoOutput.get(0)));
+        this.bitonicStages.add(
+                        new BitonicStage(
+                                SortDirection.Descending,
+                                this.stageOneOutput.get(2),
+                                this.stageOneOutput.get(3),
+                                this.stageTwoOutput.get(1)));
+        this.bitonicStages.add(
+                        new BitonicStage(
+                                SortDirection.Ascending,
+                                this.stageTwoOutput.get(0),
+                                this.stageTwoOutput.get(1),
+                                finalOutput));
 
-        Long end = System.currentTimeMillis();
-        System.out.println("Processed " + SIZE + "-sized array in " + ((end-start)/1000) + " seconds.");
+        //Creates 4 threads for StageOne
+        for (StageOne stageOne : stageOnes)
+            this.pipelineThreads.add(new Thread(stageOne));
+
+        //Create 3 threads for BitonicStage
+        for (BitonicStage bStage : this.bitonicStages)
+            this.pipelineThreads.add(new Thread(bStage));
+
+        //Starts all threads
+        for (Thread t : this.pipelineThreads)
+            t.start();
+
+        return this.pipelineThreads;
     }
-
-    @Override
-    public void run() {
-        try {
-            this.arr = bpInput.poll(200, TimeUnit.SECONDS);
-            for (int i = 0; i < SIZE - 1; i++) {
-                if (arr[i] > arr[i + 1]) {
-                    System.out.println("Sorting did not work.");
-                    System.out.printf("arr[%d] > arr[%d]: %f, %f", i, (i+1), arr[i], arr[i+1]);
-                    System.out.println(arr[i] + " at " + i + " > " + arr[i + 1]);
-                    break;
-                }
-            }
-        }
-        catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static Thread getArrayGeneratorThreads(long seed) {
-        RandomArrayGenerator arrayGen = new RandomArrayGenerator(SIZE/4, stageOneInput, seed);
-        return new Thread(arrayGen);
-    }
-
 }
