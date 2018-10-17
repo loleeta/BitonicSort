@@ -2,6 +2,8 @@ package com.lolita;
 
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 //sequential sorthing net used as benchmark for parallelization
 //does not use any threads or SynchronousQueues
@@ -10,19 +12,24 @@ import java.util.Random;
 public class BitonicSequential implements Runnable{
     private int size;
     private Double[] arr;
+    public int sortedCount;
 
     public BitonicSequential(int size) {
         this.size = size;
         this.arr = new Double[size];
+        sortedCount = 0;
     }
 
     public void run() {
-        generateNums(System.nanoTime());
-        sort(arr, 0, size, "UP");
-        checkSort();
+        Long start = System.currentTimeMillis(); //fetch starting time
+        while((System.currentTimeMillis()-start) < 10000) {
+            generateNums(System.nanoTime());
+            sort(arr, 0, size, "UP");
+            checkSort();
+        }
     }
 
-    public void sort(Double[] seq, int start, int size, String direction) {
+    private void sort(Double[] seq, int start, int size, String direction) {
         if (size > 1) {
             bitonic_sequence(seq, start, size);
             bitonic_sort(seq, start, size, direction);
@@ -81,15 +88,18 @@ public class BitonicSequential implements Runnable{
                 break;
             }
         }
+        sortedCount++;
+    }
+
+    public int getCount() {
+        return this.sortedCount;
     }
 
     public static void main(String[] args){
         System.out.println("Starting BitonicSequential sort.");
-        int N = 1<<26;
+        int N = 1<<20;
         BitonicSequential bitonicSequential = new BitonicSequential(N);
-        Long start = System.currentTimeMillis();
-        bitonicSequential.run();
-        Long end = System.currentTimeMillis();
-        System.out.println("Processed " + N + "-sized array in " + ((end-start)/1000) + " seconds.");
+        bitonicSequential.run(); //maybe use ExecutorService instead of the time loop in run()?
+        System.out.println("Processed " + bitonicSequential.sortedCount + " " + N + "-sized arrays in 10 seconds");
     }
 }
