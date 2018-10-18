@@ -1,5 +1,8 @@
 package com.lolita;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Random;
 
 /**
@@ -30,9 +33,31 @@ public class BitonicSequential {
         Long endTime = start + durationMillis;
         int sortedCount = 0;
         while (System.currentTimeMillis() < endTime) {
-            Double [] arr = generateDoubleArrays(System.nanoTime());
-            sort(arr, 0, size, "UP");
-            if(isSorted(arr))
+            //Generate 4 quarter arrays
+            Double [] arr1 = generateDoubleArrays(System.nanoTime());
+            Double [] arr2 = generateDoubleArrays(System.nanoTime());
+            Double [] arr3 = generateDoubleArrays(System.nanoTime());
+            Double [] arr4 = generateDoubleArrays(System.nanoTime());
+            //Call library sort on them depending on direction
+            sortAsc(arr1);
+            sortDesc(arr2);
+            sortAsc(arr3);
+            sortDesc(arr4);
+            //Combine arrays into two halves and bitonic sort
+            Double[] bitonicSeq1 = new Double[this.size/2];
+            Double[] bitonicSeq2 = new Double[this.size/2];
+            System.arraycopy(arr1, 0, bitonicSeq1, 0, this.size/4);
+            System.arraycopy(arr2, 0, bitonicSeq1, this.size/4, this.size/4);
+            System.arraycopy(arr3, 0, bitonicSeq2, 0, this.size/4);
+            System.arraycopy(arr4, 0, bitonicSeq2, this.size/4, this.size/4);
+            bitonic_sort(bitonicSeq1, 0, this.size/2, SortDirection.Ascending);
+            bitonic_sort(bitonicSeq2, 0, this.size/2, SortDirection.Descending);
+            //Combine arrays into two halves and bitonic sort
+            Double[] bitonicSeq3 = new Double[this.size];
+            System.arraycopy(bitonicSeq1, 0, bitonicSeq3, 0, this.size/2);
+            System.arraycopy(bitonicSeq2, 0, bitonicSeq3, this.size/2, this.size/2);
+            bitonic_sort(bitonicSeq3, 0, this.size, SortDirection.Ascending);
+            if(isSorted(bitonicSeq3))
                 sortedCount++;
         }
         return sortedCount;
@@ -44,41 +69,30 @@ public class BitonicSequential {
      * @param seed     Seed to generate unique sequences of numbers
      */
     private Double[] generateDoubleArrays(long seed) {
-        Double [] arr = new Double[this.size];
-        Double randNum;
+        Double [] arr = new Double[this.size/4];
         Random rand = new Random(seed);
-        for (int i = 0; i < size; i++) {
-            randNum = rand.nextDouble();
+        for (int i = 0; i < this.size/4; i++) {
+            Double randNum = rand.nextDouble();
             arr[i] = randNum;
         }
         return arr;
     }
 
     /**
-     * Given an array of Doubles, sort it bitonically.
-     * @param seq           Array of doubles
-     * @param start         Index to start at
-     * @param size          Size of the array
-     * @param direction     Direction of sort
+     * Given an array, sort in ascending order.
+     * @param arr   Array of Doubles
      */
-    private void sort(Double[] seq, int start, int size, String direction) {
-        if (size > 1) {
-            bitonic_sequence(seq, start, size);
-            bitonic_sort(seq, start, size, direction);
-        }
+    public void sortAsc(Double[] arr) {
+        Arrays.sort(arr);
     }
 
     /**
-     * Given an array of Doubles, create a bitonic sequence.
-     * @param seq       Array of Doubles
-     * @param start     Index to start at
-     * @param size      Size of sequence
+     * Given an array, sort in descending order.
+     * @param arr   Array of Doubles
      */
-    private void bitonic_sequence(Double[] seq, int start, int size) {
-        if (size > 1) {
-            sort(seq, start, size / 2, "UP");
-            sort(seq, start + (size / 2), size / 2, "DOWN");
-        }
+    public void sortDesc(Double[] arr) {
+        Comparator<Double> cr = Collections.reverseOrder();
+        Arrays.sort(arr, cr);
     }
 
     /**
@@ -88,7 +102,7 @@ public class BitonicSequential {
      * @param size          Size of sequence to start
      * @param direction     Which direction to sort in
      */
-    private void bitonic_sort(Double[] seq, int start, int size, String direction) {
+    private void bitonic_sort(Double[] seq, int start, int size, SortDirection direction) {
         if (size > 1) {
             bitonic_merge(seq, start, size, direction);
             bitonic_sort(seq, start, size / 2, direction);
@@ -104,8 +118,8 @@ public class BitonicSequential {
      * @param size          Size of sequence to start
      * @param direction     Which direction to sort in
      */
-    private void bitonic_merge(Double[] seq, int start, int size, String direction) {
-        if (direction.equals("UP")) {
+    private void bitonic_merge(Double[] seq, int start, int size, SortDirection direction) {
+        if (direction == SortDirection.Ascending) {
             for (int i = start; i < start + size / 2; i++)
                 if (seq[i] > seq[i + (size / 2)])
                     swap(seq, i, (i + (size / 2)));
@@ -145,7 +159,7 @@ public class BitonicSequential {
 
     public static void main(String[] args) {
         System.out.println("Starting BitonicSequential sort.");
-        int N = 1 << 19;
+        int N = 1<<22;
         int duration = 10000; //ten seconds
         BitonicSequential bitonicSequential = new BitonicSequential(N);
         int sortedCount = bitonicSequential.sortArrays(duration);
