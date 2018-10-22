@@ -159,7 +159,7 @@ public class BitonicSequential {
 
     public static void main(String[] args) {
         System.out.println("Starting BitonicSequential sort.");
-        int N = 1<<22;
+        int N = 1<<19;
         int duration = 10000; //ten seconds
         BitonicSequential bitonicSequential = new BitonicSequential(N);
         int sortedCount = bitonicSequential.sortArrays(duration);

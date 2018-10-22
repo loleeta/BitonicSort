@@ -64,8 +64,7 @@ public class BitonicPipelineMain {
                                                     "-sized arrays in 10 seconds");
 
         //clean up threads and exit
-        cleanup(generatorTheads, bitonicTheads, 5000);
-        System.exit(0);
+        cleanup(generatorTheads, bitonicTheads);
     }
 
     /**
@@ -117,25 +116,16 @@ public class BitonicPipelineMain {
      * Joins all threads after a duration of time has passed.
      * @param arrayGenThreads   array of threads for RandomNumberGenerator
      * @param bitonicThreads    array of threads for StageOne and BitonicStage
-     * @param durationMillis time to wait
      */
     public static void cleanup(ArrayList<Thread> arrayGenThreads,
-                               ArrayList<Thread> bitonicThreads,
-                               int durationMillis) {
+                               ArrayList<Thread> bitonicThreads) {
         for (Thread t: arrayGenThreads)
             if(t.isAlive())
-                try {
-                    t.join(durationMillis);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                t.interrupt();
+
         for (Thread t: bitonicThreads)
             if(t.isAlive())
-                try {
-                    t.join(durationMillis);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                t.interrupt();
     }
 
 }
